@@ -1,10 +1,3 @@
-// Don't use import syntax in regular script tags
-// Replace this:
-// import firebaseConfig from "./config";
-
-// Instead, directly access the firebaseConfig from the global scope
-// Make sure your config.js file is included before auth.js in your HTML
-
 // Check if firebaseConfig exists
 if (typeof firebaseConfig === "undefined") {
   console.error(
