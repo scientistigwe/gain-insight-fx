@@ -4,10 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Dashboard - Login</title>
+    <title>GainInsight FX Dashboard - Login</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/login.css">
     <!-- Firebase SDK -->
+    <script src="js/config.js"></script>
+    <script src="js/auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
 </head>
@@ -15,8 +17,8 @@
 <body>
     <div class="container">
         <div class="login-card">
-            <h1>Financial Dashboard</h1>
-            <h2>Partner Transparency Portal</h2>
+            <h1>GainInsight FX</h1>
+            <h2>Financial Dashboard</h2>
 
             <div id="login-form">
                 <div class="form-group">
@@ -59,16 +61,6 @@
     </div>
 
     <script>
-        // Firebase configuration - Replace with your own Firebase project details
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
 
