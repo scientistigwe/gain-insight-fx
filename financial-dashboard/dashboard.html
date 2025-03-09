@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Dashboard</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/dashboard.css">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tesseract.js for OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+</head>
+
+<body>
+    <div class="dashboard-container">
+        <!-- Header with user info and logout -->
+        <header>
+            <div class="logo">Financial Dashboard</div>
+            <div class="user-info">
+                <span id="user-email"></span>
+                <button id="logout-btn" class="btn secondary">Logout</button>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <!-- Sidebar navigation -->
+            <aside class="sidebar">
+                <nav>
+                    <ul>
+                        <li><a href="#" class="active" data-page="overview">Overview</a></li>
+                        <li><a href="#" data-page="transactions">Transactions</a></li>
+                        <li><a href="#" data-page="analytics">Analytics</a></li>
+                        <li><a href="#" data-page="predictions">Predictions</a></li>
+                    </ul>
+                </nav>
+                <div class="partner-info">
+                    <h3>Partnership Summary</h3>
+                    <div id="partner-summary">Loading...</div>
+                </div>
+            </aside>
+
+            <!-- Main content area -->
+            <main>
+                <!-- Overview Page -->
+                <section id="overview" class="page active">
+                    <h2>Financial Overview</h2>
+
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Total Sent</h3>
+                            <p id="total-sent">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Total Received</h3>
+                            <p id="total-received">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Net Balance</h3>
+                            <p id="net-balance">$0.00</p>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Recent Activity</h3>
+                            <p id="recent-activity">No activity</p>
+                        </div>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Balance History</h3>
+                        <canvas id="balance-chart"></canvas>
+                    </div>
+
+                    <div class="chart-container">
+                        <h3>Monthly Transactions</h3>
+                        <canvas id="monthly-chart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Transactions Page -->
+                <section id="transactions" class="page">
+                    <div class="section-header">
+                        <h2>Transaction History</h2>
+                        <div class="action-buttons">
+                            <button id="receipt-upload-btn" class="btn primary">Upload Receipt</button>
+                            <button id="add-transaction-btn" class="btn primary">Add Transaction</button>
+                        </div>
+                        <input type="file" id="receipt-file-input" accept="image/*,application/pdf"
+                            style="display: none;">
+                    </div>
+
+                    <div id="receipt-drop-zone" class="drop-zone">
+                        <div class="drop-zone-prompt">
+                            <p>Drag and drop transaction receipts here</p>
+                            <p class="small">Supported formats: JPG, PNG, PDF</p>
+                        </div>
+                    </div>
+
+                    <div class="filters">
+                        <div class="filter-group">
+                            <label for="type-filter">Type:</label>
+                            <select id="type-filter">
+                                <option value="all">All</option>
+                                <option value="sent">Sent</option>
+                                <option value="received">Received</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="date-filter">Date Range:</label>
+                            <select id="date-filter">
+                                <option value="all">All Time</option>
+                                <option value="month">This Month</option>
+                                <option value="quarter">This Quarter</option>
+                                <option value="year">This Year</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="search-transactions">Search:</label>
+                            <input type="text" id="search-transactions" placeholder="Search descriptions...">
+                        </div>
+                    </div>
+
+                    <div class="transactions-table-container">
+                        <table id="transactions-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Description</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Balance</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transactions-body">
+                                <!-- Transaction rows will be populated by JavaScript -->
+                                <tr>
+                                    <td colspan="6" class="text-center">Loading transactions...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Analytics Page -->
+                <section id="analytics" class="page">
+                    <h2>Financial Analytics</h2>
+
+                    <div class="chart-grid">
+                        <div class="chart-container">
+                            <h3>Transaction Distribution</h3>
+                            <canvas id="distribution-chart"></canvas>
+                        </div>
+                        <div class="chart-container">
+                            <h3>Monthly Comparison</h3>
+                            <canvas id="comparison-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="metrics-container">
+                        <h3>Key Metrics</h3>
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <h4>Average Transaction</h4>
+                                <p id="avg-transaction">$0.00</p>
+                            </div>
+                            <div class="metric-card">
+                                <h4>Largest Transaction</h4>
+                                <p id="largest-transaction">$0.00</p>
+                            </div>
+                            <div class="metric-card">
+                                <h4>Transaction Frequency</h4>
+                                <p id="transaction-frequency">0 / month</p>
+                            </div>
+                            <div class="metric-card">
+                                <h4>Growth Rate</h4>
+                                <p id="growth-rate">0%</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Predictions Page -->
+                <section id="predictions" class="page">
+                    <h2>Predictive Analysis</h2>
+
+                    <div class="chart-container">
+                        <h3>Balance Projection</h3>
+                        <canvas id="projection-chart"></canvas>
+                    </div>
+
+                    <div class="predictions-grid">
+                        <div class="prediction-card">
+                            <h3>Next Month Projection</h3>
+                            <div id="next-month-prediction">
+                                <p>Based on your transaction history, we project:</p>
+                                <div class="prediction-value">
+                                    <span class="label">Expected Sent:</span>
+                                    <span id="predicted-sent" class="value">$0.00</span>
+                                </div>
+                                <div class="prediction-value">
+                                    <span class="label">Expected Received:</span>
+                                    <span id="predicted-received" class="value">$0.00</span>
+                                </div>
+                                <div class="prediction-value">
+                                    <span class="label">Net Change:</span>
+                                    <span id="predicted-net" class="value">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="prediction-card">
+                            <h3>Future Balance Trend</h3>
+                            <div id="balance-prediction">
+                                <p>3-month balance projection:</p>
+                                <div class="prediction-value">
+                                    <span class="label">Current:</span>
+                                    <span id="current-balance" class="value">$0.00</span>
+                                </div>
+                                <div class="prediction-value">
+                                    <span class="label">Month 1:</span>
+                                    <span id="month1-balance" class="value">$0.00</span>
+                                </div>
+                                <div class="prediction-value">
+                                    <span class="label">Month 2:</span>
+                                    <span id="month2-balance" class="value">$0.00</span>
+                                </div>
+                                <div class="prediction-value">
+                                    <span class="label">Month 3:</span>
+                                    <span id="month3-balance" class="value">$0.00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Transaction Modal -->
+    <div id="transaction-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2 id="modal-title">Add Transaction</h2>
+
+            <form id="transaction-form">
+                <input type="hidden" id="transaction-id">
+
+                <div class="form-group">
+                    <label for="transaction-date">Date</label>
+                    <input type="date" id="transaction-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-type">Type</label>
+                    <select id="transaction-type" required>
+                        <option value="sent">Money Sent</option>
+                        <option value="received">Money Received</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-description">Description</label>
+                    <input type="text" id="transaction-description" placeholder="Enter description" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-amount">Amount ($)</label>
+                    <input type="number" id="transaction-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="submit" class="btn primary">Save Transaction</button>
+                    <button type="button" id="cancel-transaction" class="btn secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Receipt Processing Modal -->
+    <div id="receipt-modal" class="modal">
+        <div class="modal-content receipt-modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Process Transaction Receipt</h2>
+
+            <div class="receipt-processing-container">
+                <div id="receipt-preview" class="receipt-preview">
+                    <!-- Receipt preview will be shown here -->
+                </div>
+
+                <div class="receipt-details">
+                    <p id="receipt-processing-message">Upload a receipt to extract transaction details</p>
+
+                    <div class="extraction-details">
+                        <h3>Extracted Information</h3>
+                        <p class="small">The following details were extracted from your receipt. Please verify and edit
+                            if needed.</p>
+
+                        <!-- Transaction form will be pre-filled with extracted data -->
+                        <form id="receipt-transaction-form">
+                            <input type="hidden" id="receipt-transaction-id">
+
+                            <div class="form-group">
+                                <label for="receipt-transaction-date">Date</label>
+                                <input type="date" id="receipt-transaction-date" required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="receipt-transaction-type">Type</label>
+                                <select id="receipt-transaction-type" required>
+                                    <option value="sent">Money Sent</option>
+                                    <option value="received">Money Received</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="receipt-transaction-description">Description</label>
+                                <input type="text" id="receipt-transaction-description" placeholder="Enter description"
+                                    required>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="receipt-transaction-amount">Amount ($)</label>
+                                <input type="number" id="receipt-transaction-amount" step="0.01" min="0.01"
+                                    placeholder="0.00" required>
+                            </div>
+
+                            <div class="form-buttons">
+                                <button type="submit" class="btn primary">Save Transaction</button>
+                                <button type="button" id="receipt-cancel-transaction"
+                                    class="btn secondary">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript files -->
+    <script src="js/auth.js"></script>
+    <script src="js/data.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/predictions.js"></script>
+    <script src="js/receipt-parser.js"></script>
+</body>
+
+</html>
