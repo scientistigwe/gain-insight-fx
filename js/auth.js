@@ -1,3 +1,5 @@
+import firebaseConfig from "./config";
+
 // Initialize Firebase if not already initialized
 if (!firebase.apps.length) {
   firebase.initializeApp(firebaseConfig);
