@@ -8,6 +8,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    # Add permissions explicitly
+    permissions:
+      contents: write
     steps:
       - name: Checkout 🛎️
         uses: actions/checkout@v3
@@ -25,9 +28,18 @@ jobs:
           echo "  measurementId: \"${{ secrets.FIREBASE_MEASUREMENT_ID }}\"" >> js/config.js
           echo "};" >> js/config.js
 
+          # Debug - check if secrets are coming through (safely)
+          echo "Config file structure created. Checking for empty values:"
+          grep -q "apiKey: \"\",\|authDomain: \"\",\|projectId: \"\",\|storageBucket: \"\",\|messagingSenderId: \"\",\|appId: \"\",\|measurementId: \"\"" js/config.js && echo "WARNING: Empty values found" || echo "No empty values found"
+
+          # List files to confirm config.js exists
+          ls -la js/
+
       - name: Deploy to GitHub Pages 🚀
         uses: JamesIves/github-pages-deploy-action@v4
         with:
           folder: . # The folder the action should deploy
           branch: gh-pages # The branch the action should deploy to
           clean: true
+          # Add token for authentication if needed
+          token: ${{ secrets.GITHUB_TOKEN }}
