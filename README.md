@@ -1,178 +1,480 @@
-# GainInsight FX: Currency Exchange Rate Monitoring
+/\*\*
 
-## Project Overview
+- Update optimal trading times
+  \*/
+  function updateOptimalTradingTimes() {
+  const container = document.getElementById('optimal-days');
+  if (!container) return;
 
-GainInsight FX is a web application designed to help monitor currency exchange rates, with a specific focus on Naira (NGN) exchange rates against major currencies like USD, GBP, and EUR. The application provides tools to track historical rates, identify favorable trading opportunities, and record currency exchange transactions.
+const currencies = currencyManager.currencies.filter(c => c !== 'NGN');
 
-### Key Features
+if (!currencies || currencies.length === 0) {
+container.innerHTML = '<p>No trading time data available</p>';
+return;
+}
 
-1. **Exchange Rate Monitoring**: Track current and historical exchange rates from multiple sources
-2. **Trend Analysis**: Analyze rate trends and receive forecasts for future rates
-3. **Trading Opportunities**: Get recommendations on when to buy or sell foreign currencies
-4. **Transaction Management**: Record and track all currency exchange transactions
-5. **Profit/Loss Analysis**: Monitor the profitability of exchange activities
-6. **Alerts**: Set up alerts for favorable exchange rates
+let html = '<div class="trading-times-list">';
 
-## Implementation Steps
+currencies.forEach(currency => {
+const optimalTimes = currencyManager.getOptimalTradingTimes(currency);
 
-### 1. Project Structure
+    if (!optimalTimes || !optimalTimes.buyDay || !optimalTimes.sellDay) {
+      return;
+    }
 
-The project has been restructured with a more modular architecture:
+    html += `
+      <div class="trading-time-item">
+        <div class="trading-currency">${currency}/NGN</div>
+        <div class="trading-days">
+          <div class="trading-best-buy">
+            <span class="trading-label">Best day to buy ${currency}:</span>
+            <span class="trading-value">${optimalTimes.buyDay.name}</span>
+            <span class="trading-rate">Avg: ₦${optimalTimes.buyDay.avgRate.toFixed(2)}</span>
+          </div>
+          <div class="trading-best-sell">
+            <span class="trading-label">Best day to sell ${currency}:</span>
+            <span class="trading-value">${optimalTimes.sellDay.name}</span>
+            <span class="trading-rate">Avg: ₦${optimalTimes.sellDay.avgRate.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+    `;
 
-```
-gain-sight-fx/
-│   dashboard.html         # Main dashboard interface
-│   index.html             # Login page
-│
-├───css/
-│   ├───dashboard.css      # Dashboard styling
-│   ├───login.css          # Login page styling
-│   └───styles.css         # Common styles
-│
-└───js/
-    ├───core/              # Core functionality
-    │   ├───api.js         # API handling
-    │   ├───auth.js        # Authentication
-    │   └───config.js      # Configuration
-    │
-    ├───data/              # Data management
-    │   ├───currency-data.js # Currency exchange rate data
-    │   ├───scraper.js     # Web scraping for rates
-    │   └───transaction.js # Transaction management
-    │
-    ├───ui/                # UI components
-    │   ├───dashboard.js   # Main dashboard logic
-    │   ├───navigation.js  # Page navigation
-    │   └───receipt-parser.js # Receipt processing
-    │
-    └───visualization/     # Data visualization
-        ├───charts.js      # General charts
-        ├───currency-charts.js # Currency-specific charts
-        └───predictions.js # Predictive analysis
-```
+});
 
-### 2. Key Module Implementations
+html += '</div>';
+container.innerHTML = html;
+}
 
-#### CurrencyManager (js/data/currency-data.js)
+/\*\*
 
-- Manages currency exchange rate data and analysis
-- Handles historical rates, trends, and alerts
-- Provides predictive analysis for future rates
+- Update alerts table
+  \*/
+  function updateAlertsTable() {
+  const container = document.getElementById('alerts-table');
+  if (!container) return;
 
-#### ExchangeRateScraper (js/data/scraper.js)
+const currencies = currencyManager.currencies.filter(c => c !== 'NGN');
 
-- Fetches exchange rates from multiple sources
-- Consolidates data for more reliable rates
-- Monitors economic indicators and news that may impact rates
+if (!currencies || currencies.length === 0) {
+container.innerHTML = '<p>No alert data available</p>';
+return;
+}
 
-#### TransactionManager (js/data/transaction.js)
+let html = `    <table class="alerts-table">
+      <thead>
+        <tr>
+          <th>Currency</th>
+          <th>Current Rate</th>
+          <th>Buy Alert</th>
+          <th>Sell Alert</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+ `;
 
-- Tracks currency exchange transactions
-- Calculates profits/losses from exchange activities
-- Provides financial statistics and analytics
+currencies.forEach(currency => {
+const currentRate = currencyManager.rates[currency];
+const thresholds = currencyManager.thresholds[currency] || { buy: 0, sell: 0 };
 
-#### Currency Charts (js/visualization/currency-charts.js)
+    if (!currentRate) return;
 
-- Specialized visualizations for exchange rate data
-- Includes rate history, trend analysis, and opportunity charts
-- Responsive and interactive charts for better analysis
+    html += `
+      <tr>
+        <td>${currency}/NGN</td>
+        <td>₦${currentRate.toFixed(2)}</td>
+        <td>
+          ${thresholds.buy > 0 ?
+            `₦${thresholds.buy.toFixed(2)}
+             ${currentRate <= thresholds.buy ?
+               '<span class="alert-active">ACTIVE</span>' :
+               ''}` :
+            'Not set'}
+        </td>
+        <td>
+          ${thresholds.sell > 0 ?
+            `₦${thresholds.sell.toFixed(2)}
+             ${currentRate >= thresholds.sell ?
+               '<span class="alert-active">ACTIVE</span>' :
+               ''}` :
+            'Not set'}
+        </td>
+        <td>
+          <button class="btn-edit-alert" data-currency="${currency}">Edit</button>
+          <button class="btn-delete-alert" data-currency="${currency}">Delete</button>
+        </td>
+      </tr>
+    `;
 
-### 3. Dashboard Interface
+});
 
-The dashboard has been enhanced with new sections:
+html += `      </tbody>
+    </table>
+ `;
 
-#### Overview Page
+container.innerHTML = html;
 
-- Quick summary of current exchange rates
-- Trading opportunity recommendations
-- Recent transaction activity
+// Add event listeners to edit/delete buttons
+document.querySelectorAll('.btn-edit-alert').forEach(button => {
+button.addEventListener('click', function() {
+const currency = this.getAttribute('data-currency');
+editAlert(currency);
+});
+});
 
-#### Exchange Rates Page
+document.querySelectorAll('.btn-delete-alert').forEach(button => {
+button.addEventListener('click', function() {
+const currency = this.getAttribute('data-currency');
+deleteAlert(currency);
+});
+});
+}
 
-- Detailed exchange rate monitoring
-- Source comparison (official vs. market rates)
-- Rate trend analysis and forecasting
+/\*\*
 
-#### Transactions Page
+- Edit alert
+  \*/
+  function editAlert(currency) {
+  const modal = document.getElementById('alert-modal');
+  if (!modal) return;
 
-- Record and manage currency exchange transactions
-- Filter transactions by currency, type, and date
-- Upload and process transaction receipts
+// Set selected currency
+const currencySelect = document.getElementById('alert-currency');
+if (currencySelect) {
+currencySelect.value = currency;
+}
 
-#### Analytics Page
+// Update rate information
+updateAlertRateInfo();
 
-- Currency distribution analysis
-- Profit/loss analysis by currency
-- Exchange rate performance metrics
+// Show existing thresholds
+if (currencyManager.thresholds && currencyManager.thresholds[currency]) {
+document.getElementById('buy-threshold').value =
+currencyManager.thresholds[currency].buy > 0 ?
+currencyManager.thresholds[currency].buy : '';
 
-#### Predictions Page
+    document.getElementById('sell-threshold').value =
+      currencyManager.thresholds[currency].sell > 0 ?
+      currencyManager.thresholds[currency].sell : '';
 
-- Exchange rate forecasts
-- Optimal trading time recommendations
-- Alert management for favorable rates
+} else {
+document.getElementById('buy-threshold').value = '';
+document.getElementById('sell-threshold').value = '';
+}
 
-### 4. Data Collection & Analysis
+// Show modal
+modal.style.display = 'block';
+}
 
-The application uses multiple approaches to collect and analyze data:
+/\*\*
 
-1. **API Integration**: Connects to exchange rate APIs for reliable data
-2. **Web Scraping**: Collects rates from official and unofficial sources
-3. **Statistical Analysis**: Identifies trends and patterns in exchange rates
-4. **Predictive Modeling**: Uses linear regression to forecast future rates
-5. **Pattern Recognition**: Identifies optimal trading times based on historical patterns
+- Delete alert
+  \*/
+  async function deleteAlert(currency) {
+  if (confirm(`Are you sure you want to delete the alert for ${currency}?`)) {
+  try {
+  await currencyManager.setAlertThresholds(currency, 0, 0);
+  updateAlertsTable();
+  updateExchangeAlerts();
+  } catch (error) {
+  console.error('Error deleting alert:', error);
+  alert('Error deleting alert. Please try again.');
+  }
+  }
+  }
 
-### 5. Setting Up the Project
+/\*\*
 
-1. **Firebase Setup**:
+- Update forecast chart
+  \*/
+  function updateForecastChart() {
+  const canvas = document.getElementById('forecast-chart');
+  if (!canvas) return;
 
-   - Create a Firebase project at https://console.firebase.google.com/
-   - Enable Authentication (Email/Password)
-   - Set up Firestore Database
-   - Update `js/core/config.js` with your Firebase configuration
+const ctx = canvas.getContext('2d');
+if (!ctx) return;
 
-2. **Dependencies**:
+const currencies = currencyManager.currencies.filter(c => c !== 'NGN');
 
-   - Firebase SDK
-   - Chart.js for visualizations
-   - Tesseract.js for OCR (optional)
+if (!currencies || currencies.length === 0) {
+// No data available
+return;
+}
 
-3. **Data Structure (Firestore)**:
-   - `users`: User accounts
-   - `transactions`: Exchange transactions
-   - `exchangeRates`: Historical rate data
-   - `userPreferences`: User settings and alerts
+// Prepare datasets
+const datasets = [];
 
-### 6. Testing
+currencies.forEach(currency => {
+const currentRate = currencyManager.rates[currency];
+if (!currentRate) return;
 
-Focus on testing these key areas:
+    const prediction7 = currencyManager.predictFutureRate(currency, 7);
+    const prediction14 = currencyManager.predictFutureRate(currency, 14);
+    const prediction30 = currencyManager.predictFutureRate(currency, 30);
 
-1. **Rate Data Collection**: Verify rates are being collected correctly
-2. **Transaction Recording**: Ensure transactions update wallet balances
-3. **Alert System**: Test that alerts trigger at specified thresholds
-4. **Predictions**: Validate prediction accuracy against actual rates
-5. **UI Responsiveness**: Test across different devices and screen sizes
+    if (!prediction7 || !prediction14 || !prediction30) return;
 
-## Key Improvements from Original Version
+    const now = new Date();
+    const day7 = new Date(now);
+    day7.setDate(now.getDate() + 7);
+    const day14 = new Date(now);
+    day14.setDate(now.getDate() + 14);
+    const day30 = new Date(now);
+    day30.setDate(now.getDate() + 30);
 
-1. **Enhanced Monitoring**: The application now tracks multiple data sources for more reliable exchange rates
-2. **Advanced Analytics**: Improved visualization with specialized charts for currency analysis
-3. **Predictive Capabilities**: Added forecasting to help identify future trends
-4. **Opportunity Detection**: Automated identification of favorable trading opportunities
-5. **Chart Scaling**: Fixed issues with charts when handling variable or negative values
-6. **Wallet Management**: Better tracking of multiple currency balances
-7. **Data Organization**: More efficient data structure for improved performance
-8. **Alert System**: Customizable alerts for optimal exchange timing
+    datasets.push({
+      label: `${currency}/NGN`,
+      data: [
+        { x: now, y: currentRate },
+        { x: day7, y: prediction7.rate },
+        { x: day14, y: prediction14.rate },
+        { x: day30, y: prediction30.rate }
+      ],
+      borderColor: window.currencyColors ? window.currencyColors[currency] : getRandomColor(),
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 2,
+      tension: 0.3,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderDash: [5, 5], // Dashed line for forecasts
+      fill: false
+    });
 
-## Next Steps for Future Enhancement
+});
 
-1. **Mobile Application**: Develop a companion mobile app for on-the-go monitoring
-2. **SMS Alerts**: Implement SMS notifications for critical exchange rate changes
-3. **Advanced Prediction Models**: Incorporate machine learning for better forecasting
-4. **News Analysis**: Automated analysis of news articles for impact on exchange rates
-5. **Bank API Integration**: Direct integration with bank APIs for automated transactions
-6. **Historical Optimization**: Analysis of past transactions to recommend optimal strategies
-7. **Market Sentiment Analysis**: Track social media and forum discussions about currency trends
+if (datasets.length === 0) {
+return;
+}
 
-## Conclusion
+// Create chart
+if (window.forecastChart) {
+window.forecastChart.destroy();
+}
 
-The refactored GainInsight FX application provides a comprehensive solution for monitoring and capitalizing on currency exchange opportunities. With its enhanced features for tracking, analyzing, and predicting exchange rates, users can make more informed decisions about when to exchange currencies to maximize profits.
+window.forecastChart = new Chart(ctx, {
+type: 'line',
+data: {
+datasets: datasets
+},
+options: {
+responsive: true,
+maintainAspectRatio: false,
+scales: {
+x: {
+type: 'time',
+time: {
+unit: 'day',
+displayFormats: {
+day: 'MMM d'
+}
+},
+title: {
+display: true,
+text: 'Date'
+}
+},
+y: {
+title: {
+display: true,
+text: 'Exchange Rate (NGN)'
+}
+}
+},
+plugins: {
+legend: {
+position: 'top'
+},
+tooltip: {
+mode: 'index',
+intersect: false,
+callbacks: {
+title: function(context) {
+const date = new Date(context[0].parsed.x);
+return date.toLocaleDateString('en-US', {
+year: 'numeric',
+month: 'short',
+day: 'numeric'
+});
+},
+label: function(context) {
+const label = context.dataset.label || '';
+const value = context.parsed.y;
+
+              // Calculate days from now
+              const now = new Date();
+              const pointDate = new Date(context.parsed.x);
+              const daysDiff = Math.round((pointDate - now) / (1000 * 60 * 60 * 24));
+
+              let suffix = '';
+              if (daysDiff > 0) {
+                suffix = ` (Forecast: +${daysDiff} days)`;
+              }
+
+              return `${label}: ₦${value.toFixed(2)}${suffix}`;
+            }
+          }
+        }
+      }
+    }
+
+});
+}
+
+/\*\*
+
+- Update economic indicators display
+  \*/
+  function updateEconomicIndicators() {
+  const container = document.getElementById('economic-indicators');
+  if (!container) return;
+
+// We will fetch economic indicators using the scraper
+exchangeRateScraper.getEconomicIndicators().then(data => {
+if (!data || !data.indicators || Object.keys(data.indicators).length === 0) {
+container.innerHTML = '<p>No economic data available</p>';
+return;
+}
+
+    let html = '';
+
+    for (const [key, indicator] of Object.entries(data.indicators)) {
+      // Format indicator name
+      const name = key.replace(/([A-Z])/g, ' $1').trim();
+      const formattedName = name.charAt(0).toUpperCase() + name.slice(1);
+
+      // Format change direction
+      const changeClass = indicator.change > 0 ? 'positive' : indicator.change < 0 ? 'negative' : 'neutral';
+      const changeSign = indicator.change > 0 ? '+' : '';
+
+      // Format unit
+      const unit = indicator.unit ? ` ${indicator.unit}` : '%';
+
+      html += `
+        <div class="indicator-card">
+          <div class="indicator-header">
+            <span class="indicator-name">${formattedName}</span>
+            <span class="indicator-impact impact-${indicator.impact || 'medium'}">${indicator.impact || 'medium'} impact</span>
+          </div>
+          <div class="indicator-value">${indicator.value}${unit}</div>
+          <div class="indicator-change ${changeClass}">${changeSign}${indicator.change}${unit}</div>
+          <div class="indicator-date">${formatDate(indicator.date)}</div>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+
+}).catch(error => {
+console.error('Error fetching economic indicators:', error);
+container.innerHTML = '<p>Error loading economic data</p>';
+});
+}
+
+/\*\*
+
+- Update market news display
+  \*/
+  function updateMarketNews() {
+  const container = document.getElementById('market-news');
+  if (!container) return;
+
+// We will fetch news using the scraper
+exchangeRateScraper.getRelevantNews().then(news => {
+if (!news || news.length === 0) {
+container.innerHTML = '<p>No market news available</p>';
+return;
+}
+
+    let html = '';
+
+    news.forEach(item => {
+      // Format sentiment
+      const sentimentClass = item.sentiment === 'positive' ? 'positive' :
+                            item.sentiment === 'negative' ? 'negative' :
+                            'neutral';
+
+      const sentimentIcon = item.sentiment === 'positive' ? '📈' :
+                           item.sentiment === 'negative' ? '📉' :
+                           '📊';
+
+      html += `
+        <div class="news-item">
+          <div class="news-header">
+            <span class="news-sentiment ${sentimentClass}">${sentimentIcon}</span>
+            <span class="news-title">${item.title}</span>
+          </div>
+          <div class="news-summary">${item.summary}</div>
+          <div class="news-meta">
+            <span class="news-source">${item.source}</span>
+            <span class="news-date">${formatDate(item.date)}</span>
+            <span class="news-relevance">Relevance: ${(item.relevance * 100).toFixed(0)}%</span>
+          </div>
+        </div>
+      `;
+    });
+
+    container.innerHTML = html;
+
+}).catch(error => {
+console.error('Error fetching market news:', error);
+container.innerHTML = '<p>Error loading market news</p>';
+});
+}
+
+/\*\*
+
+- Format date
+  \*/
+  function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'short',
+  day: 'numeric'
+  });
+  }
+
+/\*\*
+
+- Format currency with symbol
+  \*/
+  function formatCurrencyWithSymbol(amount, currency) {
+  let symbol = '₦';
+
+switch (currency) {
+case 'USD':
+symbol = '$';
+break;
+case 'GBP':
+symbol = '£';
+break;
+case 'EUR':
+symbol = '€';
+break;
+}
+
+return `${symbol}${amount.toFixed(2)}`;
+}
+
+/\*\*
+
+- Generate random color
+  _/
+  function getRandomColor() {
+  const letters = '0123456789ABCDEF';
+  let color = '#';
+  for (let i = 0; i < 6; i++) {
+  color += letters[Math.floor(Math.random() _ 16)];
+  }
+  return color;
+  }
+
+// Export functions
+window.dashboard = {
+initDashboard,
+loadDashboardData,
+updateCurrencyCards,
+updateExchangeAlerts,
+updateRateSourcesTable
+};
