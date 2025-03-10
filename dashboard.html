@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Dashboard</title>
+    <title>GainInsight FX Dashboard</title>
     <link rel="stylesheet" href="css/styles.css">
     <link rel="stylesheet" href="css/dashboard.css">
     <!-- Firebase SDK -->
@@ -13,6 +13,9 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
     <!-- Chart.js for data visualization -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js/dist/chart.min.js"></script>
+    <script
+        src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <!-- Tesseract.js for OCR -->
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
 </head>
@@ -21,7 +24,7 @@
     <div class="dashboard-container">
         <!-- Header with user info and logout -->
         <header>
-            <div class="logo">Financial Dashboard</div>
+            <div class="logo">GainInsight FX Dashboard</div>
             <div class="user-info">
                 <span id="user-email"></span>
                 <button id="logout-btn" class="btn secondary">Logout</button>
@@ -34,14 +37,19 @@
                 <nav>
                     <ul>
                         <li><a href="#" class="active" data-page="overview">Overview</a></li>
+                        <li><a href="#" data-page="exchange-rates">Exchange Rates</a></li>
                         <li><a href="#" data-page="transactions">Transactions</a></li>
                         <li><a href="#" data-page="analytics">Analytics</a></li>
                         <li><a href="#" data-page="predictions">Predictions</a></li>
                     </ul>
                 </nav>
-                <div class="partner-info">
-                    <h3>Partnership Summary</h3>
-                    <div id="partner-summary">Loading...</div>
+                <div class="wallet-info">
+                    <h3>Wallet Balances</h3>
+                    <div id="wallet-summary">Loading...</div>
+                </div>
+                <div class="alerts-container">
+                    <h3>Exchange Alerts</h3>
+                    <div id="exchange-alerts">No active alerts</div>
                 </div>
             </aside>
 
@@ -53,16 +61,12 @@
 
                     <div class="stats-grid">
                         <div class="stat-card">
-                            <h3>Total Sent</h3>
-                            <p id="total-sent">$0.00</p>
+                            <h3>Total Profit/Loss</h3>
+                            <p id="total-profit">₦0.00</p>
                         </div>
                         <div class="stat-card">
-                            <h3>Total Received</h3>
-                            <p id="total-received">$0.00</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>Net Balance</h3>
-                            <p id="net-balance">$0.00</p>
+                            <h3>Best Performing Currency</h3>
+                            <p id="best-currency">-</p>
                         </div>
                         <div class="stat-card">
                             <h3>Recent Activity</h3>
@@ -70,14 +74,111 @@
                         </div>
                     </div>
 
-                    <div class="chart-container">
-                        <h3>Balance History</h3>
-                        <canvas id="balance-chart"></canvas>
+                    <div class="exchange-rates-overview">
+                        <h3>Current Exchange Rates</h3>
+                        <div class="currency-cards" id="currency-cards">
+                            <!-- Currency cards will be dynamically inserted here -->
+                        </div>
                     </div>
 
                     <div class="chart-container">
-                        <h3>Monthly Transactions</h3>
-                        <canvas id="monthly-chart"></canvas>
+                        <h3>Exchange Rate Trends</h3>
+                        <canvas id="overview-rate-chart"></canvas>
+                    </div>
+
+                    <div class="opportunity-panel">
+                        <h3>Trading Opportunities</h3>
+                        <div id="opportunity-cards" class="opportunity-cards">
+                            <!-- Opportunity cards will be dynamically inserted here -->
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Exchange Rates Page -->
+                <section id="exchange-rates" class="page">
+                    <div class="section-header">
+                        <h2>Exchange Rate Monitor</h2>
+                        <div class="action-buttons">
+                            <button id="refresh-rates-btn" class="btn primary">Refresh Rates</button>
+                            <button id="add-alert-btn" class="btn primary">Add Alert</button>
+                        </div>
+                    </div>
+
+                    <div class="filter-panel">
+                        <div class="filter-group">
+                            <label for="currency-filter">Currency:</label>
+                            <select id="currency-filter">
+                                <option value="all">All Currencies</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="time-range">Time Range:</label>
+                            <select id="time-range">
+                                <option value="7">Last 7 Days</option>
+                                <option value="30" selected>Last 30 Days</option>
+                                <option value="90">Last 90 Days</option>
+                                <option value="180">Last 180 Days</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
+                            <label for="data-source">Data Source:</label>
+                            <select id="data-source">
+                                <option value="all">All Sources</option>
+                                <option value="official">Official Rates</option>
+                                <option value="market">Market Rates</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="exchange-rate-details">
+                        <div class="rate-sources-panel">
+                            <h3>Source Comparison</h3>
+                            <div id="rate-sources-table" class="table-container">
+                                <!-- Rate sources table will be inserted here -->
+                            </div>
+                        </div>
+
+                        <div class="rate-history-panel chart-container">
+                            <h3>Rate History</h3>
+                            <canvas id="rate-history-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="currency-analytics" id="currency-analytics">
+                        <h2>Currency Analysis</h2>
+
+                        <!-- Chart containers will be dynamically created in the JS -->
+                        <div class="chart-container">
+                            <h3>Rate Trend Analysis</h3>
+                            <canvas id="rate-trend-chart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h3>Currency Performance</h3>
+                            <canvas id="currency-performance-chart"></canvas>
+                        </div>
+
+                        <div class="chart-container">
+                            <h3>Trading Opportunities</h3>
+                            <canvas id="opportunity-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="economic-indicators">
+                        <h3>Economic Indicators</h3>
+                        <div class="indicators-grid" id="economic-indicators">
+                            <!-- Economic indicators will be inserted here -->
+                        </div>
+                    </div>
+
+                    <div class="news-panel">
+                        <h3>Market News</h3>
+                        <div id="market-news" class="news-container">
+                            <!-- News items will be inserted here -->
+                        </div>
                     </div>
                 </section>
 
@@ -110,6 +211,16 @@
                             </select>
                         </div>
                         <div class="filter-group">
+                            <label for="currency-type-filter">Currency:</label>
+                            <select id="currency-type-filter">
+                                <option value="all">All</option>
+                                <option value="NGN">NGN</option>
+                                <option value="USD">USD</option>
+                                <option value="GBP">GBP</option>
+                                <option value="EUR">EUR</option>
+                            </select>
+                        </div>
+                        <div class="filter-group">
                             <label for="date-filter">Date Range:</label>
                             <select id="date-filter">
                                 <option value="all">All Time</option>
@@ -131,15 +242,18 @@
                                     <th>Date</th>
                                     <th>Description</th>
                                     <th>Type</th>
+                                    <th>From</th>
+                                    <th>To</th>
+                                    <th>Rate</th>
                                     <th>Amount</th>
-                                    <th>Balance</th>
+                                    <th>Equivalent</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
                             <tbody id="transactions-body">
                                 <!-- Transaction rows will be populated by JavaScript -->
                                 <tr>
-                                    <td colspan="6" class="text-center">Loading transactions...</td>
+                                    <td colspan="9" class="text-center">Loading transactions...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -152,7 +266,7 @@
 
                     <div class="chart-grid">
                         <div class="chart-container">
-                            <h3>Transaction Distribution</h3>
+                            <h3>Currency Distribution</h3>
                             <canvas id="distribution-chart"></canvas>
                         </div>
                         <div class="chart-container">
@@ -161,16 +275,21 @@
                         </div>
                     </div>
 
+                    <div class="chart-container">
+                        <h3>Profit/Loss Analysis</h3>
+                        <canvas id="profit-loss-chart"></canvas>
+                    </div>
+
                     <div class="metrics-container">
                         <h3>Key Metrics</h3>
                         <div class="metrics-grid">
                             <div class="metric-card">
                                 <h4>Average Transaction</h4>
-                                <p id="avg-transaction">$0.00</p>
+                                <p id="avg-transaction">₦0.00</p>
                             </div>
                             <div class="metric-card">
                                 <h4>Largest Transaction</h4>
-                                <p id="largest-transaction">$0.00</p>
+                                <p id="largest-transaction">₦0.00</p>
                             </div>
                             <div class="metric-card">
                                 <h4>Transaction Frequency</h4>
@@ -182,6 +301,13 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="currency-performance-analysis">
+                        <h3>Currency Performance Analysis</h3>
+                        <div id="currency-performance-table" class="table-container">
+                            <!-- Currency performance table will be inserted here -->
+                        </div>
+                    </div>
                 </section>
 
                 <!-- Predictions Page -->
@@ -189,50 +315,38 @@
                     <h2>Predictive Analysis</h2>
 
                     <div class="chart-container">
-                        <h3>Balance Projection</h3>
-                        <canvas id="projection-chart"></canvas>
+                        <h3>Exchange Rate Forecast</h3>
+                        <canvas id="forecast-chart"></canvas>
                     </div>
 
                     <div class="predictions-grid">
                         <div class="prediction-card">
-                            <h3>Next Month Projection</h3>
-                            <div id="next-month-prediction">
-                                <p>Based on your transaction history, we project:</p>
-                                <div class="prediction-value">
-                                    <span class="label">Expected Sent:</span>
-                                    <span id="predicted-sent" class="value">$0.00</span>
-                                </div>
-                                <div class="prediction-value">
-                                    <span class="label">Expected Received:</span>
-                                    <span id="predicted-received" class="value">$0.00</span>
-                                </div>
-                                <div class="prediction-value">
-                                    <span class="label">Net Change:</span>
-                                    <span id="predicted-net" class="value">$0.00</span>
+                            <h3>Exchange Rate Forecast</h3>
+                            <div id="rate-forecast">
+                                <p>Based on historical patterns, we project:</p>
+                                <div id="currency-predictions">
+                                    <!-- Currency predictions will be inserted here -->
                                 </div>
                             </div>
                         </div>
                         <div class="prediction-card">
-                            <h3>Future Balance Trend</h3>
-                            <div id="balance-prediction">
-                                <p>3-month balance projection:</p>
-                                <div class="prediction-value">
-                                    <span class="label">Current:</span>
-                                    <span id="current-balance" class="value">$0.00</span>
-                                </div>
-                                <div class="prediction-value">
-                                    <span class="label">Month 1:</span>
-                                    <span id="month1-balance" class="value">$0.00</span>
-                                </div>
-                                <div class="prediction-value">
-                                    <span class="label">Month 2:</span>
-                                    <span id="month2-balance" class="value">$0.00</span>
-                                </div>
-                                <div class="prediction-value">
-                                    <span class="label">Month 3:</span>
-                                    <span id="month3-balance" class="value">$0.00</span>
+                            <h3>Optimal Trading Times</h3>
+                            <div id="trading-times">
+                                <p>Statistical analysis of best times to trade:</p>
+                                <div id="optimal-days">
+                                    <!-- Optimal trading days will be inserted here -->
                                 </div>
                             </div>
+                        </div>
+                    </div>
+
+                    <div class="alerts-management">
+                        <h3>Exchange Rate Alerts</h3>
+                        <div class="alerts-description">
+                            <p>Set up alerts to be notified when exchange rates reach your target levels.</p>
+                        </div>
+                        <div id="alerts-table" class="table-container">
+                            <!-- Alerts table will be inserted here -->
                         </div>
                     </div>
                 </section>
@@ -267,14 +381,102 @@
                     <input type="text" id="transaction-description" placeholder="Enter description" required>
                 </div>
 
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="from-currency">From Currency</label>
+                        <select id="from-currency" required>
+                            <option value="NGN">NGN (Naira)</option>
+                            <option value="USD">USD (US Dollar)</option>
+                            <option value="GBP">GBP (British Pound)</option>
+                            <option value="EUR">EUR (Euro)</option>
+                            <option value="external">External Source</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="to-currency">To Currency</label>
+                        <select id="to-currency" required>
+                            <option value="NGN">NGN (Naira)</option>
+                            <option value="USD">USD (US Dollar)</option>
+                            <option value="GBP">GBP (British Pound)</option>
+                            <option value="EUR">EUR (Euro)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="transaction-amount">Amount</label>
+                        <input type="number" id="transaction-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="exchange-rate">Exchange Rate</label>
+                        <input type="number" id="exchange-rate" step="0.0001" min="0.0001" placeholder="0.00">
+                        <button type="button" id="fetch-rate-btn" class="btn secondary small">Fetch Current</button>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label for="transaction-amount">Amount ($)</label>
-                    <input type="number" id="transaction-amount" step="0.01" min="0.01" placeholder="0.00" required>
+                    <label for="transaction-fees">Fees</label>
+                    <input type="number" id="transaction-fees" step="0.01" min="0" placeholder="0.00" value="0">
+                </div>
+
+                <div class="form-group">
+                    <label for="transaction-category">Category</label>
+                    <select id="transaction-category">
+                        <option value="exchange">Currency Exchange</option>
+                        <option value="transfer">Money Transfer</option>
+                        <option value="investment">Investment</option>
+                        <option value="income">Income</option>
+                        <option value="expense">Expense</option>
+                    </select>
                 </div>
 
                 <div class="form-buttons">
                     <button type="submit" class="btn primary">Save Transaction</button>
                     <button type="button" id="cancel-transaction" class="btn secondary">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Alert Modal -->
+    <div id="alert-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Set Exchange Rate Alert</h2>
+
+            <form id="alert-form">
+                <div class="form-group">
+                    <label for="alert-currency">Currency</label>
+                    <select id="alert-currency" required>
+                        <option value="USD">USD (US Dollar)</option>
+                        <option value="GBP">GBP (British Pound)</option>
+                        <option value="EUR">EUR (Euro)</option>
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="buy-threshold">Buy Alert (when rate falls below)</label>
+                        <input type="number" id="buy-threshold" step="0.01" min="0" placeholder="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sell-threshold">Sell Alert (when rate rises above)</label>
+                        <input type="number" id="sell-threshold" step="0.01" min="0" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div class="alert-info">
+                    <p>Current rate: <span id="current-alert-rate">Loading...</span></p>
+                    <p>Historical average: <span id="avg-alert-rate">Loading...</span></p>
+                </div>
+
+                <div class="form-buttons">
+                    <button type="submit" class="btn primary">Save Alert</button>
+                    <button type="button" id="cancel-alert" class="btn secondary">Cancel</button>
                 </div>
             </form>
         </div>
@@ -322,10 +524,41 @@
                                     required>
                             </div>
 
-                            <div class="form-group">
-                                <label for="receipt-transaction-amount">Amount ($)</label>
-                                <input type="number" id="receipt-transaction-amount" step="0.01" min="0.01"
-                                    placeholder="0.00" required>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="receipt-from-currency">From Currency</label>
+                                    <select id="receipt-from-currency" required>
+                                        <option value="NGN">NGN (Naira)</option>
+                                        <option value="USD">USD (US Dollar)</option>
+                                        <option value="GBP">GBP (British Pound)</option>
+                                        <option value="EUR">EUR (Euro)</option>
+                                        <option value="external">External Source</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="receipt-to-currency">To Currency</label>
+                                    <select id="receipt-to-currency" required>
+                                        <option value="NGN">NGN (Naira)</option>
+                                        <option value="USD">USD (US Dollar)</option>
+                                        <option value="GBP">GBP (British Pound)</option>
+                                        <option value="EUR">EUR (Euro)</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="receipt-transaction-amount">Amount</label>
+                                    <input type="number" id="receipt-transaction-amount" step="0.01" min="0.01"
+                                        placeholder="0.00" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="receipt-exchange-rate">Exchange Rate</label>
+                                    <input type="number" id="receipt-exchange-rate" step="0.0001" min="0.0001"
+                                        placeholder="0.00">
+                                </div>
                             </div>
 
                             <div class="form-buttons">
@@ -341,14 +574,22 @@
     </div>
 
     <!-- JavaScript files -->
-    <script src="js/config.js"></script>
-    <script src="js/config-debug.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/data.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/predictions.js"></script>
-    <script src="js/receipt-parser.js"></script>
+    <script src="js/core/config.js"></script>
+    <script src="js/core/auth.js"></script>
+    <script src="js/core/api.js"></script>
+    <script src="js/data/currency-data.js"></script>
+    <script src="js/data/transaction.js"></script>
+    <script src="js/data/scraper.js"></script>
+    <script src="js/ui/dashboard.js"></script>
+    <script src="js/ui/navigation.js"></script>
+    <script src="js/ui/receipt-parser.js"></script>
+    <script src="js/visualization/charts.js"></script>
+    <script src="js/visualization/currency-charts.js"></script>
+    <script src="js/visualization/predictions.js"></script>
 </body>
 
 </html>
+<h3>Total Exchange Volume</h3>
+<p id="total-volume">₦0.00</p>
+</div>
+<div class="stat-card">
