@@ -34,13 +34,13 @@ import {
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
-import { getUsers, createUser, updateUser, deleteUser } from "../../api/admin";
 import { formatDateTime } from "../../utils/formatters";
+import { useAdmin } from "../../context/AppProvider";
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Use the admin hook from AppProvider
+  const { users, loading, error, fetchUsers, addUser, editUser, removeUser } = useAdmin();
+  
   const [successMessage, setSuccessMessage] = useState("");
 
   // User dialog state
@@ -66,22 +66,7 @@ const AdminUsers = () => {
   // Fetch users on mount
   useEffect(() => {
     fetchUsers();
-  }, []);
-
-  // Fetch users from API
-  const fetchUsers = async () => {
-    setLoading(true);
-    try {
-      const response = await getUsers();
-      setUsers(response.data);
-      setError(null);
-    } catch (err) {
-      console.error("Error fetching users:", err);
-      setError("Failed to load users. Please try again later.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [fetchUsers]);
 
   // Handle new user button click
   const handleNewUser = () => {
@@ -192,7 +177,7 @@ const AdminUsers = () => {
     try {
       if (dialogMode === "create") {
         // Create new user
-        await createUser({
+        await addUser({
           email: userForm.email,
           full_name: userForm.full_name,
           password: userForm.password,
@@ -214,13 +199,9 @@ const AdminUsers = () => {
           userData.password = userForm.password;
         }
 
-        await updateUser(selectedUserId, userData);
-
+        await editUser(selectedUserId, userData);
         setSuccessMessage("User updated successfully");
       }
-
-      // Refresh users list
-      await fetchUsers();
 
       // Close dialog
       setDialogOpen(false);
@@ -250,11 +231,7 @@ const AdminUsers = () => {
   // Handle delete user
   const handleDeleteUser = async () => {
     try {
-      await deleteUser(userToDelete.id);
-
-      // Refresh users list
-      await fetchUsers();
-
+      await removeUser(userToDelete.id);
       setSuccessMessage("User deleted successfully");
 
       // Clear success message after 3 seconds
@@ -263,7 +240,7 @@ const AdminUsers = () => {
       }, 3000);
     } catch (err) {
       console.error("Error deleting user:", err);
-      setError("Failed to delete user. Please try again later.");
+      setSuccessMessage("Failed to delete user. Please try again later.");
     } finally {
       setDeleteDialogOpen(false);
       setUserToDelete(null);
@@ -273,12 +250,9 @@ const AdminUsers = () => {
   // Handle toggle user status
   const handleToggleUserStatus = async (user) => {
     try {
-      await updateUser(user.id, {
+      await editUser(user.id, {
         is_active: !user.is_active,
       });
-
-      // Refresh users list
-      await fetchUsers();
 
       setSuccessMessage(
         `User ${user.is_active ? "deactivated" : "activated"} successfully`
@@ -290,7 +264,7 @@ const AdminUsers = () => {
       }, 3000);
     } catch (err) {
       console.error("Error updating user status:", err);
-      setError("Failed to update user status. Please try again later.");
+      setSuccessMessage("Failed to update user status. Please try again later.");
     }
   };
 
@@ -320,7 +294,7 @@ const AdminUsers = () => {
 
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {error.message || "An error occurred"}
         </Alert>
       )}
 

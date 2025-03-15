@@ -1,33 +1,24 @@
 import axios from "axios";
-import { getToken, clearTokens } from "./auth";
 
+// Use a default API URL if the environment variable isn't set
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || "/api/v1",
+  baseURL: "http://localhost:8000/api/v1", // Replace with your actual backend URL
   headers: {
     "Content-Type": "application/json",
   },
+  // Enable sending cookies with every request - critical for cookie auth
+  withCredentials: true
 });
 
-// Request interceptor for adding auth token
-apiClient.interceptors.request.use(
-  (config) => {
-    const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// Response interceptor for handling auth errors
+// Modified interceptor
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // Handle token expiration
-      clearTokens();
-      window.location.href = "/login";
+      // Only redirect if we're not already on the login page
+      if (!window.location.pathname.includes('/login')) {
+        window.location.href = "/login";
+      }
     }
     return Promise.reject(error);
   }

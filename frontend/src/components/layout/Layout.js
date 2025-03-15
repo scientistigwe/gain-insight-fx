@@ -9,15 +9,15 @@ import {
 } from "@mui/material";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../context/AppProvider"; // Changed import path
 
 const Layout = () => {
-  const { user, loading } = useAuth();
+  const { currentUser, loading } = useAuth(); // Changed from user to currentUser
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
   // If user is logged in, show the dashboard layout with sidebar
-  const isAuthenticated = !!user;
+  const isAuthenticated = !!currentUser; // Changed from user to currentUser
 
   if (loading) {
     return (

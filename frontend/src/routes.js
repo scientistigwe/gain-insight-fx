@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router-dom";
 import Layout from "./components/layout/Layout";
 import PrivateRoute from "./components/common/PrivateRoute";
 import AdminRoute from "./components/common/AdminRoute";
+import AuthDebugger from "./components/debug/AuthDebugger";
 
 // Auth pages
 import Login from "./pages/Auth/Login";
@@ -16,8 +17,8 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 
 // Admin pages
-import AdminUsers from "./pages/Admin/Users";
-import AdminAuditLogs from "./pages/Admin/AuditLogs";
+import AdminUsers from "./pages/Admin/AdminUsers";
+import AdminAuditLogs from "./pages/Admin/AdminAuditLogs";
 
 const router = createBrowserRouter([
   {
@@ -85,6 +86,14 @@ const router = createBrowserRouter([
         element: (
           <AdminRoute>
             <AdminUsers />
+          </AdminRoute>
+        ),
+      },
+      {
+        path: "debug",
+        element: (
+          <AdminRoute>
+            <AuthDebugger />
           </AdminRoute>
         ),
       },

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Container,
   Grid,
@@ -7,7 +7,6 @@ import {
   CardContent,
   Typography,
   FormControl,
-  InputLabel,
   Select,
   MenuItem,
   Box,
@@ -40,16 +39,11 @@ import {
   Legend,
 } from "chart.js";
 import {
-  getProfitLoss,
-  getTransactionStatistics,
-  getCurrencyPerformance,
-  getOpportunities,
-} from "../../api/analytics";
-import {
   formatCurrency,
   formatPercentage,
   formatDate,
 } from "../../utils/formatters";
+import { useAnalytics } from "../../context/AppProvider";
 
 // Register Chart.js components
 ChartJS.register(
@@ -83,49 +77,23 @@ const StatItem = styled(Box)(({ theme }) => ({
 }));
 
 const Analytics = () => {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [profitLoss, setProfitLoss] = useState(null);
-  const [transactionStats, setTransactionStats] = useState(null);
-  const [currencyPerformance, setCurrencyPerformance] = useState(null);
-  const [opportunities, setOpportunities] = useState(null);
   const [timeRange, setTimeRange] = useState(90); // days
-
-  useEffect(() => {
-    const fetchAnalyticsData = async () => {
-      setLoading(true);
-      try {
-        const [
-          profitLossRes,
-          transactionStatsRes,
-          currencyPerformanceRes,
-          opportunitiesRes,
-        ] = await Promise.all([
-          getProfitLoss(),
-          getTransactionStatistics(),
-          getCurrencyPerformance(timeRange),
-          getOpportunities(),
-        ]);
-
-        setProfitLoss(profitLossRes.data);
-        setTransactionStats(transactionStatsRes.data);
-        setCurrencyPerformance(currencyPerformanceRes.data);
-        setOpportunities(opportunitiesRes.data);
-
-        setError(null);
-      } catch (err) {
-        console.error("Error fetching analytics data:", err);
-        setError("Failed to load analytics data. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAnalyticsData();
-  }, [timeRange]);
+  
+  // Use the analytics context instead of local state and API calls
+  const { 
+    loading, 
+    error, 
+    profitLoss, 
+    transactionStats, 
+    currencyPerformance, 
+    opportunities,
+    fetchAnalyticsData 
+  } = useAnalytics();
 
   const handleTimeRangeChange = (event) => {
-    setTimeRange(parseInt(event.target.value));
+    const newTimeRange = parseInt(event.target.value);
+    setTimeRange(newTimeRange);
+    fetchAnalyticsData(newTimeRange);
   };
 
   // Prepare profit/loss chart data

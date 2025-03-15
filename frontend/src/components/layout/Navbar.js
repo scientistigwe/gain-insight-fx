@@ -24,10 +24,10 @@ import MenuIcon from '@mui/icons-material/Menu';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../context/AppProvider'; // Updated import
 
 const Navbar = () => {
-  const { user, logout } = useAuth();
+  const { currentUser, logout } = useAuth(); // Changed from user to currentUser
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -64,7 +64,7 @@ const Navbar = () => {
         <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
           {/* Logo and title */}
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            {isMobile && user && (
+            {isMobile && currentUser && ( // Changed from user to currentUser
               <IconButton
                 color="inherit"
                 aria-label="open drawer"
@@ -92,7 +92,7 @@ const Navbar = () => {
           
           {/* User menu or login/register buttons */}
           <Box>
-            {user ? (
+            {currentUser ? ( // Changed from user to currentUser
               <>
                 {/* User is logged in */}
                 <IconButton
@@ -103,7 +103,7 @@ const Navbar = () => {
                   color="inherit"
                 >
                   <Avatar sx={{ width: 32, height: 32, bgcolor: 'secondary.main' }}>
-                    {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                    {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
                   </Avatar>
                 </IconButton>
                 <Menu
@@ -123,7 +123,7 @@ const Navbar = () => {
                 >
                   <MenuItem disabled>
                     <Typography variant="body2" color="textSecondary">
-                      {user.email}
+                      {currentUser.email}
                     </Typography>
                   </MenuItem>
                   <Divider />
@@ -157,7 +157,7 @@ const Navbar = () => {
       </Container>
       
       {/* Mobile Drawer */}
-      {user && (
+      {currentUser && ( // Changed from user to currentUser
         <Drawer
           variant="temporary"
           open={mobileOpen}
@@ -178,14 +178,14 @@ const Navbar = () => {
           >
             <Box sx={{ p: 2, display: 'flex', alignItems: 'center' }}>
               <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', mr: 2 }}>
-                {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                {currentUser.full_name ? currentUser.full_name.charAt(0).toUpperCase() : currentUser.email.charAt(0).toUpperCase()}
               </Avatar>
               <Box>
                 <Typography variant="subtitle1" noWrap>
-                  {user.full_name || 'User'}
+                  {currentUser.full_name || 'User'}
                 </Typography>
                 <Typography variant="body2" color="textSecondary" noWrap>
-                  {user.email}
+                  {currentUser.email}
                 </Typography>
               </Box>
             </Box>

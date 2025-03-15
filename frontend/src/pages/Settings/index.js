@@ -23,18 +23,19 @@ import {
   IconButton,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth, useUser } from "../../context/AppProvider"; // Updated import
 import { updateUserProfile, updateUserPassword } from "../../api/users";
 
 const Settings = () => {
-  const { user, logout } = useAuth();
+  const { currentUser, logout } = useAuth(); // Changed from user to currentUser
+  const { updateProfile } = useUser(); // Added from useUser hook
 
   // Tab state
   const [currentTab, setCurrentTab] = useState(0);
 
   // Profile form state
   const [profileForm, setProfileForm] = useState({
-    full_name: user?.full_name || "",
+    full_name: currentUser?.full_name || "", // Changed from user to currentUser
   });
   const [profileErrors, setProfileErrors] = useState({});
   const [profileSuccess, setProfileSuccess] = useState("");
@@ -117,7 +118,13 @@ const Settings = () => {
     setProfileSubmitting(true);
 
     try {
-      await updateUserProfile(profileForm);
+      // Use updateProfile from useUser hook if available, otherwise fall back to API call
+      if (updateProfile) {
+        await updateProfile(profileForm);
+      } else {
+        await updateUserProfile(profileForm);
+      }
+
       setProfileSuccess("Profile updated successfully");
 
       // Clear success message after 3 seconds
@@ -270,7 +277,7 @@ const Settings = () => {
                     <TextField
                       fullWidth
                       label="Email"
-                      value={user?.email || ""}
+                      value={currentUser?.email || ""} // Changed from user to currentUser
                       disabled
                       variant="outlined"
                       helperText="Your email address cannot be changed"

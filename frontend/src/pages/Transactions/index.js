@@ -37,13 +37,9 @@ import {
   ArrowDownward as ArrowDownwardIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
-import {
-  getUserTransactions,
-  createTransaction,
-  deleteTransaction,
-} from "../../api/transactions";
-import { getCurrentRates } from "../../api/currencies";
-import { getUserWallets } from "../../api/users";
+
+// Import custom hooks from the AppProvider
+import { useAuth, useCurrency, useUser, useTransactions } from "../../context/AppProvider";
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
 
 // Styled components
@@ -642,11 +638,29 @@ function TabPanel(props) {
 
 // Main Transactions component
 const Transactions = () => {
+  // Get authentication state
+  const { isAuthenticated } = useAuth();
+
+  // Use our custom hooks for API operations
+  const {
+    transactions,
+    loading: transactionsLoading,
+    error: transactionsError,
+    fetchTransactions,
+    addTransaction,
+    removeTransaction,
+    fetchWallets,
+    wallets,
+  } = useTransactions();
+
+  const {
+    currentRates,
+    loading: ratesLoading,
+    error: ratesError,
+    fetchCurrentRates,
+  } = useCurrency();
+
   // State
-  const [transactions, setTransactions] = useState([]);
-  const [wallets, setWallets] = useState([]);
-  const [currencyRates, setCurrencyRates] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showNewTransactionModal, setShowNewTransactionModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -658,30 +672,27 @@ const Transactions = () => {
   });
   const [tabValue, setTabValue] = useState(0);
 
-  // Fetch data on component mount
+  // Fetch data on component mount if authenticated
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
       try {
-        const [transactionsRes, walletsRes, ratesRes] = await Promise.all([
-          getUserTransactions(),
-          getUserWallets(),
-          getCurrentRates(),
+        // Use the custom hooks to fetch data (they will check for authentication)
+        await Promise.all([
+          fetchTransactions(),
+          fetchWallets(),
+          fetchCurrentRates(),
         ]);
-
-        setTransactions(transactionsRes.data);
-        setWallets(walletsRes.data);
-        setCurrencyRates(ratesRes.data);
       } catch (err) {
         console.error("Error fetching data:", err);
         setError("Failed to load data. Please refresh the page and try again.");
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchData();
-  }, []);
+    // Only fetch data if authenticated
+    if (isAuthenticated) {
+      fetchData();
+    }
+  }, [isAuthenticated, fetchTransactions, fetchWallets, fetchCurrentRates]);
 
   // Get unique currency codes from transactions for filtering
   const uniqueCurrencies = useMemo(() => {
@@ -700,64 +711,66 @@ const Transactions = () => {
     setShowNewTransactionModal(true);
   }, []);
 
-  const handleSubmitTransaction = useCallback(async (transactionData) => {
-    setSubmitting(true);
+  const handleSubmitTransaction = useCallback(
+    async (transactionData) => {
+      setSubmitting(true);
 
-    try {
-      const response = await createTransaction(transactionData);
+      try {
+        // Use our custom hook for adding a transaction
+        const newTransaction = await addTransaction(transactionData);
 
-      // Add new transaction to the list
-      setTransactions((prev) => [response.data, ...prev]);
+        // Show success message
+        setSuccessMessage("Transaction created successfully");
 
-      // Show success message
-      setSuccessMessage("Transaction created successfully");
+        // Close modal
+        setShowNewTransactionModal(false);
 
-      // Close modal
-      setShowNewTransactionModal(false);
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 3000);
+      } catch (err) {
+        console.error("Error creating transaction:", err);
+        setError(
+          err.response?.data?.detail ||
+            "Failed to create transaction. Please try again."
+        );
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [addTransaction]
+  );
 
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 3000);
-    } catch (err) {
-      console.error("Error creating transaction:", err);
-      setError(
-        err.response?.data?.detail ||
-          "Failed to create transaction. Please try again."
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  }, []);
+  const handleDeleteTransaction = useCallback(
+    async (id) => {
+      if (
+        !window.confirm("Are you sure you want to delete this transaction?")
+      ) {
+        return;
+      }
 
-  const handleDeleteTransaction = useCallback(async (id) => {
-    if (!window.confirm("Are you sure you want to delete this transaction?")) {
-      return;
-    }
+      try {
+        // Use our custom hook for removing a transaction
+        await removeTransaction(id);
 
-    try {
-      await deleteTransaction(id);
+        // Show success message
+        setSuccessMessage("Transaction deleted successfully");
 
-      // Remove deleted transaction from the list
-      setTransactions((prev) =>
-        prev.filter((transaction) => transaction.id !== id)
-      );
-
-      // Show success message
-      setSuccessMessage("Transaction deleted successfully");
-
-      // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSuccessMessage("");
-      }, 3000);
-    } catch (err) {
-      console.error("Error deleting transaction:", err);
-      setError(
-        err.response?.data?.detail ||
-          "Failed to delete transaction. Please try again."
-      );
-    }
-  }, []);
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSuccessMessage("");
+        }, 3000);
+      } catch (err) {
+        console.error("Error deleting transaction:", err);
+        setError(
+          err.response?.data?.detail ||
+            "Failed to delete transaction. Please try again."
+        );
+      }
+    },
+    [removeTransaction]
+  );
 
   const handleSort = useCallback((key) => {
     setSortConfig((prev) => ({
@@ -771,6 +784,8 @@ const Transactions = () => {
   };
 
   // Render loading state
+  const loading = transactionsLoading || ratesLoading;
+
   if (loading && !transactions.length) {
     return (
       <Box
@@ -787,6 +802,24 @@ const Transactions = () => {
           Loading transactions...
         </Typography>
       </Box>
+    );
+  }
+
+  // Display message if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Container maxWidth="sm" sx={{ py: 8 }}>
+        <Card>
+          <CardContent>
+            <Typography variant="h5" align="center" gutterBottom>
+              Please Sign In
+            </Typography>
+            <Typography variant="body1" align="center">
+              You need to be logged in to view and manage transactions.
+            </Typography>
+          </CardContent>
+        </Card>
+      </Container>
     );
   }
 
@@ -812,7 +845,12 @@ const Transactions = () => {
         </Button>
       </Box>
 
-      {error && <StyledAlert severity="error">{error}</StyledAlert>}
+      {(error || transactionsError || ratesError) && (
+        <StyledAlert severity="error">
+          {error || transactionsError || ratesError}
+        </StyledAlert>
+      )}
+
       {successMessage && (
         <StyledAlert severity="success">{successMessage}</StyledAlert>
       )}
@@ -935,7 +973,7 @@ const Transactions = () => {
       <TabPanel value={tabValue} index={1}>
         <TransactionSummary
           transactions={transactions}
-          currencyRates={currencyRates}
+          currencyRates={currentRates}
         />
       </TabPanel>
 
@@ -952,7 +990,7 @@ const Transactions = () => {
             onSubmit={handleSubmitTransaction}
             onCancel={() => setShowNewTransactionModal(false)}
             wallets={wallets}
-            currencyRates={currencyRates}
+            currencyRates={currentRates}
             submitting={submitting}
           />
         </DialogContent>

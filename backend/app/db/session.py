@@ -1,43 +1,38 @@
 """
 Database session configuration.
-This module sets up the database session for SQLAlchemy.
 """
-import logging
-from typing import Generator
-
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 from app.core.config import settings
 
-# Create engine for PostgreSQL
+# Convert PostgresDsn to string before passing to create_async_engine
+DATABASE_URL = str(settings.DATABASE_URI)
+
+# Create async engine
 engine = create_async_engine(
-    settings.DATABASE_URI,
-    pool_pre_ping=True,
+    DATABASE_URL,
     echo=False,
+    future=True,
 )
 
-# Create session factory
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine,
+# Create async session factory
+AsyncSessionLocal = sessionmaker(
+    engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
 
-logger = logging.getLogger(__name__)
+# Create base class for declarative models
+Base = declarative_base()
 
-
-async def get_db_session() -> Generator[AsyncSession, None, None]:
-    """
-    Get a database session.
-    
-    Yields:
-        AsyncSession: A database session
-    """
-    session = SessionLocal()
-    try:
-        yield session
-    finally:
-        await session.close()
+# Dependency to get async database session
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise

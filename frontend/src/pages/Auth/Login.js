@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Card,
@@ -14,60 +14,60 @@ import {
   Grid,
   Divider,
   InputAdornment,
-  IconButton
-} from '@mui/material';
-import { Visibility, VisibilityOff } from '@mui/icons-material';
-import { useAuth } from '../../hooks/useAuth';
+  IconButton,
+} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
+import { useAuth } from "../../context/AppProvider"; // Updated import
 
 const Login = () => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [formError, setFormError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [formError, setFormError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Check if there's a message in the location state (e.g., from registration)
   const message = location.state?.message;
-  
+
   const handleTogglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-  
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!email || !password) {
-      setFormError('Please enter both email and password');
+      setFormError("Please enter both email and password");
       return;
     }
-    
+
     setIsSubmitting(true);
-    setFormError('');
-    
+    setFormError("");
+
     try {
       await login(email, password);
-      
+
       // Redirect to dashboard or the page they were trying to access
-      const from = location.state?.from?.pathname || '/dashboard';
+      const from = location.state?.from?.pathname || "/dashboard";
       navigate(from);
     } catch (error) {
       setFormError(
-        error.response?.data?.detail || 
-        'Login failed. Please check your credentials and try again.'
+        error.response?.data?.detail ||
+          "Login failed. Please check your credentials and try again."
       );
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
     <Container maxWidth="sm" sx={{ py: 8 }}>
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
+      <Box sx={{ mb: 4, textAlign: "center" }}>
         <Typography variant="h4" component="h1" gutterBottom fontWeight={500}>
           GainSight FX
         </Typography>
@@ -75,26 +75,31 @@ const Login = () => {
           Currency Exchange Rate Monitoring
         </Typography>
       </Box>
-      
+
       {message && (
         <Alert severity="success" sx={{ mb: 3 }}>
           {message}
         </Alert>
       )}
-      
+
       <Card variant="outlined" sx={{ borderRadius: 2 }}>
         <CardContent sx={{ p: 3 }}>
           <Typography variant="h5" component="h2" gutterBottom align="center">
             Sign In
           </Typography>
-          
+
           {formError && (
             <Alert severity="error" sx={{ mb: 3 }}>
               {formError}
             </Alert>
           )}
-          
-          <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1 }}>
+
+          <Box
+            component="form"
+            onSubmit={handleSubmit}
+            noValidate
+            sx={{ mt: 1 }}
+          >
             <TextField
               margin="normal"
               required
@@ -114,7 +119,7 @@ const Login = () => {
               fullWidth
               name="password"
               label="Password"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               id="password"
               autoComplete="current-password"
               value={password}
@@ -144,18 +149,18 @@ const Login = () => {
               {isSubmitting ? (
                 <CircularProgress size={24} color="inherit" />
               ) : (
-                'Sign In'
+                "Sign In"
               )}
             </Button>
           </Box>
         </CardContent>
-        
+
         <Divider />
-        
-        <CardActions sx={{ justifyContent: 'center', p: 2 }}>
+
+        <CardActions sx={{ justifyContent: "center", p: 2 }}>
           <Typography variant="body2" color="text.secondary">
-            Don't have an account?{' '}
-            <Link to="/register" style={{ color: 'inherit', fontWeight: 500 }}>
+            Don't have an account?{" "}
+            <Link to="/register" style={{ color: "inherit", fontWeight: 500 }}>
               Register
             </Link>
           </Typography>

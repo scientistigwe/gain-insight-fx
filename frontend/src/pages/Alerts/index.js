@@ -41,9 +41,8 @@ import {
   Edit as EditIcon,
   Delete as DeleteIcon,
 } from "@mui/icons-material";
-import { useAlerts } from "../../hooks/useAlerts";
-import { getCurrentRates } from "../../api/currencies";
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
+import { useAlerts, useCurrency, useAuth } from "../../context/AppProvider";
 
 // Styled components
 const StyledCard = styled(Card)(({ theme }) => ({
@@ -61,17 +60,25 @@ const LoadingContainer = styled(Box)(({ theme }) => ({
 }));
 
 const Alerts = () => {
+  // Use our custom hooks from AppProvider
+  const { isAuthenticated } = useAuth();
   const {
     alerts,
-    loading,
-    error,
+    loading: alertsLoading,
+    error: alertsError,
     fetchAlerts,
     addAlert,
-    modifyAlert,
+    editAlert: modifyAlert,
     removeAlert,
   } = useAlerts();
-  const [currencyRates, setCurrencyRates] = useState([]);
-  const [ratesLoading, setRatesLoading] = useState(true);
+
+  const {
+    currentRates,
+    loading: ratesLoading,
+    error: ratesError,
+    fetchCurrentRates,
+  } = useCurrency();
+
   const [showNewAlertModal, setShowNewAlertModal] = useState(false);
   const [alertForm, setAlertForm] = useState({
     base_currency_id: "",
@@ -85,22 +92,23 @@ const Alerts = () => {
   const [editAlertId, setEditAlertId] = useState(null);
   const [filterActive, setFilterActive] = useState("all"); // 'all', 'active', 'triggered'
 
-  // Fetch currency rates on mount
+  // Fetch currency rates and alerts on mount if authenticated
   useEffect(() => {
-    const fetchRates = async () => {
-      setRatesLoading(true);
+    const fetchInitialData = async () => {
+      if (!isAuthenticated) {
+        return;
+      }
+
       try {
-        const response = await getCurrentRates();
-        setCurrencyRates(response.data);
+        await fetchCurrentRates();
+        await fetchAlerts();
       } catch (err) {
-        console.error("Error fetching currency rates:", err);
-      } finally {
-        setRatesLoading(false);
+        console.error("Error fetching initial data:", err);
       }
     };
 
-    fetchRates();
-  }, []);
+    fetchInitialData();
+  }, [isAuthenticated, fetchCurrentRates, fetchAlerts]);
 
   const handleShowNewAlertModal = () => {
     setAlertForm({
@@ -185,6 +193,13 @@ const Alerts = () => {
   const handleSubmitAlert = async (e) => {
     e.preventDefault();
 
+    if (!isAuthenticated) {
+      setFormErrors({
+        submit: "You must be logged in to create alerts",
+      });
+      return;
+    }
+
     // Validate form
     const errors = validateForm();
     if (Object.keys(errors).length > 0) {
@@ -234,6 +249,11 @@ const Alerts = () => {
   };
 
   const handleDeleteAlert = async (id) => {
+    if (!isAuthenticated) {
+      setSuccessMessage("You must be logged in to delete alerts");
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this alert?")) {
       return;
     }
@@ -258,6 +278,11 @@ const Alerts = () => {
   };
 
   const handleToggleAlertStatus = async (alert) => {
+    if (!isAuthenticated) {
+      setSuccessMessage("You must be logged in to update alerts");
+      return;
+    }
+
     try {
       await modifyAlert(alert.id, {
         is_active: !alert.is_active,
@@ -286,7 +311,7 @@ const Alerts = () => {
   const findCurrencyById = (id) => {
     let currency = null;
 
-    currencyRates.forEach((rate) => {
+    currentRates.forEach((rate) => {
       if (rate.base_currency.id === id) {
         currency = rate.base_currency;
       } else if (rate.quote_currency.id === id) {
@@ -311,7 +336,7 @@ const Alerts = () => {
     let rate = null;
 
     // Direct rate
-    const directRate = currencyRates.find(
+    const directRate = currentRates.find(
       (r) =>
         r.base_currency.id === alert.base_currency_id &&
         r.quote_currency.id === alert.quote_currency_id
@@ -321,7 +346,7 @@ const Alerts = () => {
       rate = directRate.rate;
     } else {
       // Inverse rate
-      const inverseRate = currencyRates.find(
+      const inverseRate = currentRates.find(
         (r) =>
           r.base_currency.id === alert.quote_currency_id &&
           r.quote_currency.id === alert.base_currency_id
@@ -345,8 +370,28 @@ const Alerts = () => {
   };
 
   const filteredAlerts = getFilteredAlerts();
+  const loading = alertsLoading || ratesLoading;
+  const error = alertsError || ratesError;
 
-  if (loading && ratesLoading) {
+  // Show a message if the user is not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="h5" align="center" gutterBottom>
+              Please Sign In
+            </Typography>
+            <Typography variant="body1" align="center">
+              You need to be logged in to view and manage alerts.
+            </Typography>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (loading && !alerts.length) {
     return (
       <LoadingContainer>
         <CircularProgress />
@@ -587,7 +632,7 @@ const Alerts = () => {
                     <MenuItem value="">
                       <em>Select base currency</em>
                     </MenuItem>
-                    {currencyRates.map((rate) => {
+                    {currentRates.map((rate) => {
                       const currency = rate.base_currency;
                       return (
                         <MenuItem
@@ -619,7 +664,7 @@ const Alerts = () => {
                     <MenuItem value="">
                       <em>Select quote currency</em>
                     </MenuItem>
-                    {currencyRates.map((rate) => {
+                    {currentRates.map((rate) => {
                       const currency = rate.quote_currency;
                       return (
                         <MenuItem

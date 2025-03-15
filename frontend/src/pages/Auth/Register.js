@@ -16,7 +16,8 @@ import {
   IconButton,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { register } from "../../api/auth";
+// Updated import to use AppProvider
+import { useAuth } from "../../context/AppProvider";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -30,6 +31,8 @@ const Register = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  // Get register function from auth context
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {

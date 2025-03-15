@@ -1,51 +1,90 @@
 import apiClient from "./client";
 
-// Authentication functions
-export const login = (email, password) => {
-  const formData = new FormData();
-  formData.append("username", email);
-  formData.append("password", password);
+/**
+ * Login with credentials
+ * @param {Object} credentials - Login credentials
+ * @returns {Promise<Object>} - Login response with user data
+ */
+export const login = (credentials) => {
+  // Map email to username as expected by the OAuth2 backend
+  const formData = {
+    username: credentials.email, // Map email to username
+    password: credentials.password,
+    grant_type: "password", // Required for OAuth2
+  };
 
-  return apiClient.post("/auth/login", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
+  return apiClient.post("/auth/login", new URLSearchParams(formData), {
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
   });
 };
 
-export const register = (userData) => {
-  return apiClient.post("/auth/register", userData);
+/**
+ * Register a new user
+ * @param {Object} data - Registration data
+ * @returns {Promise<Object>} - Registration response
+ */
+export const register = (data) => {
+  return apiClient.post("/auth/register", data);
 };
 
-export const refreshToken = (refreshToken) => {
-  return apiClient.post("/auth/refresh", { refresh_token: refreshToken });
+/**
+ * Refresh authentication token
+ * @returns {Promise<Object>} - New token response
+ */
+export const refreshToken = () => {
+  return apiClient.post("/auth/refresh");
 };
 
-// Token management functions
-export const setToken = (token) => {
-  localStorage.setItem("token", token);
+/**
+ * Logout the user by clearing cookies
+ * @returns {Promise<Object>} - Logout response
+ */
+export const logout = () => {
+  return apiClient.post("/auth/logout");
 };
 
-export const getToken = () => {
-  return localStorage.getItem("token");
+/**
+ * Request password reset
+ * @param {Object} data - Password reset request data
+ * @returns {Promise<Object>} - Response
+ */
+export const requestPasswordReset = (data) => {
+  return apiClient.post("/auth/reset-password", data);
 };
 
-export const setRefreshToken = (token) => {
-  localStorage.setItem("refreshToken", token);
+/**
+ * Confirm password reset
+ * @param {Object} data - Password reset confirmation data
+ * @returns {Promise<Object>} - Response
+ */
+export const confirmPasswordReset = (data) => {
+  return apiClient.post("/auth/verify-password-reset", data);
 };
 
-export const getRefreshToken = () => {
-  return localStorage.getItem("refreshToken");
+/**
+ * Check if user is authenticated
+ * @returns {Promise<boolean>} - Promise resolving to authentication status
+ */
+export const isAuthenticated = async () => {
+  try {
+    await apiClient.get("/auth/verify");
+    return true;
+  } catch (error) {
+    // Check if the error is due to being unauthorized
+    if (error.response && error.response.status === 401) {
+      return false;
+    }
+    // For other errors, log them but still return false
+    console.error("Auth verification error:", error);
+    return false;
+  }
 };
 
-export const clearTokens = () => {
-  localStorage.removeItem("token");
-  localStorage.removeItem("refreshToken");
-};
-
-export const isAuthenticated = () => {
-  const token = getToken();
-  return !!token; // Return true if token exists
-};
-
+/**
+ * Check if user is an admin
+ * @param {Object} user - User object
+ * @returns {boolean} - True if admin, false otherwise
+ */
 export const isAdmin = (user) => {
-  return user && user.is_admin === true;
+  return user && user.is_superuser === true;
 };

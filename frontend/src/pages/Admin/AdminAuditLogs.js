@@ -24,13 +24,13 @@ import {
   Alert,
   Chip
 } from '@mui/material';
-import { getAuditLogs } from '../../api/admin';
 import { formatDateTime } from '../../utils/formatters';
+import { useAdmin } from '../../context/AppProvider';
 
 const AdminAuditLogs = () => {
-  const [auditLogs, setAuditLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  // Use the admin hook from AppProvider
+  const { auditLogs, loading, error, fetchAuditLogs } = useAdmin();
+  
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filters, setFilters] = useState({
@@ -39,33 +39,16 @@ const AdminAuditLogs = () => {
     entityType: ''
   });
 
-  // Fetch audit logs with filters
-  const fetchAuditLogs = async () => {
-    setLoading(true);
-    try {
-      const options = {
-        skip: page * rowsPerPage,
-        limit: rowsPerPage,
-        ...Object.fromEntries(
-          Object.entries(filters).filter(([_, value]) => value !== '')
-        )
-      };
-      
-      const response = await getAuditLogs(options);
-      setAuditLogs(response.data);
-      setError(null);
-    } catch (err) {
-      console.error('Error fetching audit logs:', err);
-      setError('Failed to load audit logs. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   // Fetch audit logs on mount and when filters or pagination changes
   useEffect(() => {
-    fetchAuditLogs();
-  }, [page, rowsPerPage]);
+    fetchAuditLogs({ 
+      skip: page * rowsPerPage,
+      limit: rowsPerPage,
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== '')
+      )
+    });
+  }, [fetchAuditLogs, page, rowsPerPage]);
 
   // Handle filter changes
   const handleFilterChange = (e) => {
@@ -79,7 +62,13 @@ const AdminAuditLogs = () => {
   // Apply filters
   const handleApplyFilters = () => {
     setPage(0); // Reset to first page
-    fetchAuditLogs();
+    fetchAuditLogs({ 
+      skip: 0,
+      limit: rowsPerPage,
+      ...Object.fromEntries(
+        Object.entries(filters).filter(([_, value]) => value !== '')
+      )
+    });
   };
 
   // Reset filters
@@ -90,7 +79,7 @@ const AdminAuditLogs = () => {
       entityType: ''
     });
     setPage(0);
-    fetchAuditLogs();
+    fetchAuditLogs({ skip: 0, limit: rowsPerPage });
   };
 
   // Handle page change
@@ -126,7 +115,11 @@ const AdminAuditLogs = () => {
         Audit Logs
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error.message || "An error occurred"}
+        </Alert>
+      )}
 
       {/* Filters */}
       <Card variant="outlined" sx={{ mb: 4 }}>
