@@ -43,12 +43,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
-import {
-  getCurrentRates,
-  getHistoricalRates,
-  getTrends,
-} from "../../api/currencies";
-import { createAlert } from "../../api/alerts";
+import { useAuth, useCurrency, useAlerts } from "../../context/AppProvider"; // Updated import
 import { formatCurrency, formatDateTime } from "../../utils/formatters";
 
 // Register Chart.js components
@@ -98,9 +93,22 @@ const TrendStatCard = styled(Box)(({ theme }) => ({
 }));
 
 const Currencies = () => {
+  const { isAuthenticated } = useAuth();
+  const {
+    currentRates,
+    historicalRates,
+    trends,
+    loading: currencyLoading,
+    error: currencyError,
+    fetchCurrentRates,
+    fetchHistoricalRates,
+    fetchTrends,
+  } = useCurrency();
+
+  const { addAlert, loading: alertLoading, error: alertError } = useAlerts();
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currencyRates, setCurrencyRates] = useState([]);
   const [selectedCurrency, setSelectedCurrency] = useState(null);
   const [historicalData, setHistoricalData] = useState([]);
   const [trendData, setTrendData] = useState(null);
@@ -108,20 +116,25 @@ const Currencies = () => {
   const [alertThreshold, setAlertThreshold] = useState("");
   const [isAboveThreshold, setIsAboveThreshold] = useState(true);
   const [alertSuccess, setAlertSuccess] = useState("");
-  const [alertError, setAlertError] = useState("");
+  const [alertFormError, setAlertFormError] = useState("");
   const [tabValue, setTabValue] = useState(0);
 
-  // Fetch current rates on component mount
+  // Fetch current rates on component mount if authenticated
   useEffect(() => {
-    const fetchCurrentRates = async () => {
+    const fetchCurrencyRates = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        const response = await getCurrentRates();
-        setCurrencyRates(response.data);
+        // Use our custom hook to fetch currency rates
+        await fetchCurrentRates();
 
         // Set first currency as default selected currency
-        if (response.data.length > 0 && !selectedCurrency) {
-          const defaultCurrency = response.data[0].quote_currency;
+        if (currentRates.length > 0 && !selectedCurrency) {
+          const defaultCurrency = currentRates[0].quote_currency;
           setSelectedCurrency(defaultCurrency);
           fetchCurrencyDetails(defaultCurrency.code);
         }
@@ -133,20 +146,23 @@ const Currencies = () => {
       }
     };
 
-    fetchCurrentRates();
-  }, []);
+    fetchCurrencyRates();
+  }, [isAuthenticated, fetchCurrentRates, currentRates, selectedCurrency]);
 
   // Fetch historical data and trends for selected currency
   const fetchCurrencyDetails = async (currencyCode) => {
+    if (!isAuthenticated) return;
+
     setLoading(true);
     try {
-      const [historicalResponse, trendResponse] = await Promise.all([
-        getHistoricalRates(currencyCode, timeRange),
-        getTrends(currencyCode, timeRange),
+      // Use our custom hooks to fetch historical data and trends
+      const [historicalData, trendsData] = await Promise.all([
+        fetchHistoricalRates({ currency: currencyCode, days: timeRange }),
+        fetchTrends({ currency: currencyCode, days: timeRange }),
       ]);
 
-      setHistoricalData(historicalResponse.data);
-      setTrendData(trendResponse.data);
+      setHistoricalData(historicalData);
+      setTrendData(trendsData);
     } catch (err) {
       console.error(`Error fetching details for ${currencyCode}:`, err);
       setError(`Failed to load ${currencyCode} data. Please try again later.`);
@@ -170,13 +186,18 @@ const Currencies = () => {
   const handleCreateAlert = async (e) => {
     e.preventDefault();
 
+    if (!isAuthenticated) {
+      setAlertFormError("You must be logged in to create alerts");
+      return;
+    }
+
     if (!selectedCurrency || !alertThreshold) {
-      setAlertError("Please select a currency and enter a threshold value");
+      setAlertFormError("Please select a currency and enter a threshold value");
       return;
     }
 
     try {
-      await createAlert({
+      await addAlert({
         base_currency_id: selectedCurrency.id,
         quote_currency_id: 1, // Assuming NGN is ID 1, adjust as needed
         threshold: parseFloat(alertThreshold),
@@ -194,7 +215,7 @@ const Currencies = () => {
       }, 3000);
     } catch (err) {
       console.error("Error creating alert:", err);
-      setAlertError(
+      setAlertFormError(
         err.response?.data?.detail ||
           "Failed to create alert. Please try again."
       );
@@ -247,7 +268,27 @@ const Currencies = () => {
     },
   };
 
-  if (loading && !currencyRates.length) {
+  // Show a message if the user is not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="h5" align="center" gutterBottom>
+              Please Sign In
+            </Typography>
+            <Typography variant="body1" align="center">
+              You need to be logged in to view currency exchange rates.
+            </Typography>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  // Show loading state
+  const isLoading = loading || currencyLoading || alertLoading;
+  if (isLoading && !currentRates.length) {
     return (
       <LoadingContainer>
         <CircularProgress />
@@ -258,15 +299,18 @@ const Currencies = () => {
     );
   }
 
+  // Combine all errors
+  const combinedError = error || currencyError || alertError;
+
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
       <Typography variant="h4" component="h1" gutterBottom>
         Currency Exchange Rates
       </Typography>
 
-      {error && (
+      {combinedError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          {error}
+          {combinedError}
         </Alert>
       )}
 
@@ -284,7 +328,7 @@ const Currencies = () => {
                 }}
                 disablePadding
               >
-                {currencyRates.map((rate) => (
+                {currentRates.map((rate) => (
                   <CurrencyListItem
                     key={rate.quote_currency.id}
                     selected={selectedCurrency?.id === rate.quote_currency.id}
@@ -418,7 +462,7 @@ const Currencies = () => {
                 />
                 <Divider />
                 <CardContent>
-                  {loading ? (
+                  {isLoading ? (
                     <Box
                       sx={{ display: "flex", justifyContent: "center", py: 5 }}
                     >

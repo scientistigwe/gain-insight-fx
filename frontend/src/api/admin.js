@@ -1,28 +1,48 @@
+// api/admin.js
 import apiClient from "./client";
 
-export const getUsers = (skip = 0, limit = 100) => {
-  return apiClient.get(`/admin/users?skip=${skip}&limit=${limit}`);
+/**
+ * Get all users (admin only)
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Array>} - Users
+ */
+export const getUsers = (params = {}) => {
+  return apiClient.get("/admin/users", { params });
 };
 
+/**
+ * Create new user (admin only)
+ * @param {Object} userData - User data
+ * @returns {Promise<Object>} - Created user
+ */
 export const createUser = (userData) => {
   return apiClient.post("/admin/users", userData);
 };
 
+/**
+ * Update user (admin only)
+ * @param {string|number} id - User ID
+ * @param {Object} userData - User update data
+ * @returns {Promise<Object>} - Updated user
+ */
 export const updateUser = (id, userData) => {
   return apiClient.put(`/admin/users/${id}`, userData);
 };
 
+/**
+ * Delete user (admin only)
+ * @param {string|number} id - User ID
+ * @returns {Promise<Object>} - Response
+ */
 export const deleteUser = (id) => {
   return apiClient.delete(`/admin/users/${id}`);
 };
 
-export const getAuditLogs = (options = {}) => {
-  const { skip = 0, limit = 100, userId, action, entityType } = options;
-  let url = `/admin/audit-logs?skip=${skip}&limit=${limit}`;
-
-  if (userId) url += `&user_id=${userId}`;
-  if (action) url += `&action=${action}`;
-  if (entityType) url += `&entity_type=${entityType}`;
-
-  return apiClient.get(url);
+/**
+ * Get audit logs (admin only)
+ * @param {Object} params - Query parameters
+ * @returns {Promise<Array>} - Audit logs
+ */
+export const getAuditLogs = (params = {}) => {
+  return apiClient.get("/admin/audit-logs", { params });
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Grid,
@@ -14,94 +14,122 @@ import {
   List,
   ListItem,
   ListItemText,
-  Chip
-} from '@mui/material';
-import { useAuth } from '../../hooks/useAuth';
-import { getCurrentRates } from '../../api/currencies';
-import { getUserWallets } from '../../api/users';
-import { getUserTransactions } from '../../api/transactions';
-import { getUserAlerts } from '../../api/alerts';
-import { formatCurrency, formatDateTime } from '../../utils/formatters';
+  Chip,
+} from "@mui/material";
+import {
+  useAuth,
+  useCurrency,
+  useUser,
+  useTransactions,
+  useAlerts,
+} from "../../context/AppProvider";
+import { formatCurrency, formatDateTime } from "../../utils/formatters";
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { currentUser, isAuthenticated } = useAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [currencyRates, setCurrencyRates] = useState([]);
-  const [wallets, setWallets] = useState([]);
-  const [transactions, setTransactions] = useState([]);
-  const [alerts, setAlerts] = useState([]);
+
+  // Use our custom hooks from the AppProvider
+  const { currentRates, fetchCurrentRates, error: ratesError } = useCurrency();
+  const { wallets, fetchWallets, error: walletsError } = useUser();
+  const {
+    transactions,
+    fetchTransactions,
+    error: transactionsError,
+  } = useTransactions();
+  const { alerts, fetchAlerts, error: alertsError } = useAlerts();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
+      if (!isAuthenticated) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       try {
-        // For now, just fetch currency rates
-        const response = await getCurrentRates();
-        setCurrencyRates(response.data);
-        
-        // Placeholder for wallet data
-        setWallets([
-          { id: 1, balance: 1000, currency: { code: 'NGN', symbol: '₦' } },
-          { id: 2, balance: 500, currency: { code: 'USD', symbol: '$' } }
+        // Fetch all dashboard data using our custom hooks
+        await Promise.all([
+          fetchCurrentRates(),
+          fetchWallets(),
+          fetchTransactions({ limit: 5 }), // Only get latest 5 transactions for dashboard
+          fetchAlerts(),
         ]);
-        
-        // Placeholder for transaction data
-        setTransactions([
-          { 
-            id: 1, 
-            from_currency: { code: 'NGN', symbol: '₦' }, 
-            to_currency: { code: 'USD', symbol: '$' },
-            from_amount: 50000,
-            to_amount: 100,
-            transaction_date: new Date().toISOString()
-          }
-        ]);
-        
-        // Placeholder for alert data
-        setAlerts([
-          {
-            id: 1,
-            base_currency: { code: 'NGN' },
-            quote_currency: { code: 'USD' },
-            threshold: 500,
-            is_above_threshold: false,
-            is_active: true
-          }
-        ]);
-        
       } catch (err) {
-        console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data');
+        console.error("Error fetching dashboard data:", err);
+        setError("Failed to load dashboard data");
       } finally {
         setLoading(false);
       }
     };
 
     fetchDashboardData();
-  }, []);
+  }, [
+    isAuthenticated,
+    fetchCurrentRates,
+    fetchWallets,
+    fetchTransactions,
+    fetchAlerts,
+  ]);
+
+  // Combine all errors from hooks
+  const combinedError =
+    error || ratesError || walletsError || transactionsError || alertsError;
 
   if (loading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "50vh",
+        }}
+      >
         <CircularProgress />
       </Box>
     );
   }
 
-  if (error) {
+  // Show a message if the user is not authenticated
+  if (!isAuthenticated) {
+    return (
+      <Container maxWidth="sm" sx={{ mt: 8 }}>
+        <Card variant="outlined">
+          <CardContent>
+            <Typography variant="h5" align="center" gutterBottom>
+              Please Sign In
+            </Typography>
+            <Typography variant="body1" align="center">
+              You need to be logged in to view your dashboard.
+            </Typography>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (combinedError) {
     return (
       <Container maxWidth="lg" sx={{ mt: 4 }}>
-        <Alert severity="error">{error}</Alert>
+        <Alert severity="error">{combinedError}</Alert>
       </Container>
     );
   }
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 4,
+        }}
+      >
         <Typography variant="h4" component="h1">
-          Welcome, {user?.full_name || 'User'}
+          Welcome, {currentUser?.full_name || "User"}
         </Typography>
         <Typography variant="body2" color="text.secondary">
           Last updated: {new Date().toLocaleString()}
@@ -111,7 +139,17 @@ const Dashboard = () => {
       {/* Quick Stats */}
       <Grid container spacing={3} sx={{ mb: 4 }}>
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} variant="outlined" sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Paper
+            elevation={0}
+            variant="outlined"
+            sx={{
+              p: 2,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Total Wallets
             </Typography>
@@ -124,12 +162,22 @@ const Dashboard = () => {
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} variant="outlined" sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Paper
+            elevation={0}
+            variant="outlined"
+            sx={{
+              p: 2,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Active Alerts
             </Typography>
             <Typography variant="h3" component="div">
-              {alerts.filter(a => a.is_active).length}
+              {alerts.filter((a) => a.is_active).length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Monitoring exchange rates
@@ -137,7 +185,17 @@ const Dashboard = () => {
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} variant="outlined" sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Paper
+            elevation={0}
+            variant="outlined"
+            sx={{
+              p: 2,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Transactions
             </Typography>
@@ -150,12 +208,22 @@ const Dashboard = () => {
           </Paper>
         </Grid>
         <Grid item xs={12} sm={6} md={3}>
-          <Paper elevation={0} variant="outlined" sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+          <Paper
+            elevation={0}
+            variant="outlined"
+            sx={{
+              p: 2,
+              height: "100%",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+            }}
+          >
             <Typography variant="h6" color="text.secondary" gutterBottom>
               Exchange Rates
             </Typography>
             <Typography variant="h3" component="div">
-              {currencyRates.length}
+              {currentRates.length}
             </Typography>
             <Typography variant="body2" color="text.secondary">
               Currencies tracked
@@ -172,35 +240,56 @@ const Dashboard = () => {
             <CardHeader title="Latest Exchange Rates" />
             <Divider />
             <CardContent>
-              {currencyRates.length > 0 ? (
+              {currentRates.length > 0 ? (
                 <List>
-                  {currencyRates.slice(0, 5).map((rate, index) => (
+                  {currentRates.slice(0, 5).map((rate, index) => (
                     <React.Fragment key={index}>
                       <ListItem>
                         <ListItemText
                           primary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
                               <Typography variant="subtitle1">
-                                {rate.base_currency?.code}/{rate.quote_currency?.code}
+                                {rate.base_currency?.code}/
+                                {rate.quote_currency?.code}
                               </Typography>
                               <Typography variant="subtitle1" fontWeight="bold">
-                                {rate.base_currency?.symbol}{formatCurrency(rate.rate)}
+                                {rate.base_currency?.symbol}
+                                {formatCurrency(rate.rate)}
                               </Typography>
                             </Box>
                           }
                           secondary={
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography variant="body2" color="text.secondary">
-                                {rate.base_currency?.name} / {rate.quote_currency?.name}
+                            <Box
+                              sx={{
+                                display: "flex",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
+                                {rate.base_currency?.name} /{" "}
+                                {rate.quote_currency?.name}
                               </Typography>
-                              <Typography variant="body2" color="text.secondary">
+                              <Typography
+                                variant="body2"
+                                color="text.secondary"
+                              >
                                 Updated: {formatDateTime(rate.timestamp)}
                               </Typography>
                             </Box>
                           }
                         />
                       </ListItem>
-                      {index < currencyRates.slice(0, 5).length - 1 && <Divider />}
+                      {index < currentRates.slice(0, 5).length - 1 && (
+                        <Divider />
+                      )}
                     </React.Fragment>
                   ))}
                 </List>
@@ -232,7 +321,8 @@ const Dashboard = () => {
                           }
                           secondary={
                             <Typography variant="h6" component="span">
-                              {wallet.currency.symbol}{formatCurrency(wallet.balance)}
+                              {wallet.currency.symbol}
+                              {formatCurrency(wallet.balance)}
                             </Typography>
                           }
                         />
@@ -262,19 +352,34 @@ const Dashboard = () => {
                     <ListItem key={transaction.id}>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
                             <Typography variant="subtitle1">
-                              {transaction.from_currency.code} → {transaction.to_currency.code}
+                              {transaction.from_currency.code} →{" "}
+                              {transaction.to_currency.code}
                             </Typography>
                             <Typography variant="subtitle1">
-                              {transaction.from_currency.symbol}{formatCurrency(transaction.from_amount)}
+                              {transaction.from_currency.symbol}
+                              {formatCurrency(transaction.from_amount)}
                             </Typography>
                           </Box>
                         }
                         secondary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
                             <Typography variant="body2" color="text.secondary">
-                              Rate: {formatCurrency(transaction.from_amount / transaction.to_amount)}
+                              Rate:{" "}
+                              {formatCurrency(
+                                transaction.from_amount / transaction.to_amount
+                              )}
                             </Typography>
                             <Typography variant="body2" color="text.secondary">
                               {formatDateTime(transaction.transaction_date)}
@@ -306,21 +411,33 @@ const Dashboard = () => {
                     <ListItem key={alert.id}>
                       <ListItemText
                         primary={
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Box
+                            sx={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                            }}
+                          >
                             <Typography variant="subtitle1">
-                              {alert.base_currency.code}/{alert.quote_currency.code}
+                              {alert.base_currency.code}/
+                              {alert.quote_currency.code}
                             </Typography>
-                            <Chip 
+                            <Chip
                               size="small"
-                              label={alert.is_above_threshold ? 'Above' : 'Below'}
-                              color={alert.is_above_threshold ? 'error' : 'success'}
+                              label={
+                                alert.is_above_threshold ? "Above" : "Below"
+                              }
+                              color={
+                                alert.is_above_threshold ? "error" : "success"
+                              }
                               variant="outlined"
                             />
                           </Box>
                         }
                         secondary={
                           <Typography variant="body2">
-                            Alert when rate goes {alert.is_above_threshold ? 'above' : 'below'} {formatCurrency(alert.threshold)}
+                            Alert when rate goes{" "}
+                            {alert.is_above_threshold ? "above" : "below"}{" "}
+                            {formatCurrency(alert.threshold)}
                           </Typography>
                         }
                       />

@@ -19,14 +19,14 @@ import InsightsIcon from "@mui/icons-material/Insights";
 import SettingsIcon from "@mui/icons-material/Settings";
 import PeopleIcon from "@mui/icons-material/People";
 import ListAltIcon from "@mui/icons-material/ListAlt";
-import { useAuth } from "../../hooks/useAuth";
+import { useAuth } from "../../context/AppProvider"; // Updated import path
 
 // Drawer width
 const drawerWidth = 240;
 
 const Sidebar = () => {
   const location = useLocation();
-  const { user } = useAuth();
+  const { currentUser } = useAuth(); // Changed from user to currentUser
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -153,7 +153,7 @@ const Sidebar = () => {
           ))}
         </List>
 
-        {user && user.is_admin && (
+        {currentUser && currentUser.is_admin && ( // Changed from user to currentUser
           <>
             <Divider sx={{ mx: 2, my: 1 }} />
             <List>

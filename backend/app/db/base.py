@@ -1,17 +1,9 @@
 """
 Database base configuration.
-This module imports all models to ensure they are registered with SQLAlchemy.
+This module provides the Base class for SQLAlchemy models.
 """
-from sqlalchemy.ext.declarative import declarative_base
+# Import the Base class from session.py
+from app.db.session import Base
 
-# Create declarative base for SQLAlchemy models
-Base = declarative_base()
-
-# Import all models here to ensure they are registered with SQLAlchemy
-from app.models.user import User  # noqa
-from app.models.currency import Currency, ExchangeRate  # noqa
-from app.models.transaction import Transaction  # noqa
-from app.models.wallet import Wallet  # noqa
-from app.models.alert import Alert  # noqa
-from app.models.audit import AuditLog  # noqa
-from app.models.notification import Notification  # noqa
+# This file should only contain the Base import
+# Model imports should be in base_class_imports.py to avoid circular imports
